@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "wechat-mcp-publisher": {
+      "type": "stdio",
+      "command": "/Users/wnh/.local/bin/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Volumes/ssd512/develop/workspace/wechat-mcp-publisher",
+        "python",
+        "-m",
+        "wechat_mcp_publisher"
+      ]
+    }
+  }
+}

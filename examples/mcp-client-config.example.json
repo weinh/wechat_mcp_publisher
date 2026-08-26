@@ -1,0 +1,16 @@
+{
+  "_comment": "MCP 客户端 stdio 接入示例。command 建议用 uv 绝对路径（`which uv` 查询），避免客户端受限 PATH 找不到命令。Claude Code 也可用 `claude mcp add` 一条命令完成，见 README。",
+  "mcpServers": {
+    "wechat-mcp-publisher": {
+      "command": "/Users/你的用户名/.local/bin/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/绝对路径/wechat-mcp-publisher",
+        "python",
+        "-m",
+        "wechat_mcp_publisher"
+      ]
+    }
+  }
+}
