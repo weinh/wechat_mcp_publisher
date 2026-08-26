@@ -1,17 +1,39 @@
 [project]
 name = "wechat-mcp-publisher"
 version = "0.1.0"
-description = "微信公众号草稿发布本地 MCP 工具（FastMCP + stdio）"
+description = "微信公众号草稿发布本地 MCP 工具（官方 mcp SDK、stdio、token 内部管理）"
 readme = "README.md"
 authors = [
     { name = "yongle", email = "yonglelaoren@163.com" }
 ]
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["mcp", "wechat", "公众号", "draft", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "mcp>=2.1.1",
     "python-dotenv>=1.2.3",
     "requests>=2.34.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/weinh/wechat_mcp_publisher"
+Repository = "https://github.com/weinh/wechat_mcp_publisher"
+Issues = "https://github.com/weinh/wechat_mcp_publisher/issues"
+
+[project.scripts]
+wechat-mcp-publisher = "wechat_mcp_publisher.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]

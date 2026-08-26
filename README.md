@@ -25,6 +25,15 @@ cp .env.example .env   # 填入 WECHAT_APP_ID / WECHAT_APP_SECRET
 
 凭据获取：[mp.weixin.qq.com](https://mp.weixin.qq.com) → 设置与开发 → 基本配置。**同一页面需把本机公网 IP 加入 IP 白名单**，否则 token 获取报 `40164`。
 
+已发布 PyPI 后也可免克隆直接运行（在含 `.env` 的目录）：
+
+```bash
+uvx wechat-mcp-publisher
+# 或 pip install wechat-mcp-publisher && wechat-mcp-publisher
+```
+
+此时 MCP 客户端配置可简化为 `"command": "uvx", "args": ["wechat-mcp-publisher"]`。
+
 ## 接入 MCP 客户端
 
 Claude Code（推荐，一条命令）：
