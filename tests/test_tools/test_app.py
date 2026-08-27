@@ -43,10 +43,13 @@ def test_tool_descriptions_present():
 def test_known_error_hints_are_readable():
     error = WeChatAPIError(48001, "api unauthorized")
     text = str(error)
-    assert "48001" in text and "认证" in text
+    assert "48001" in text and "无权" in text
 
     ip_error = WeChatAPIError(40164, "invalid ip 1.2.3.4 ipv6 ::ffff:1.2.3.4")
     assert "白名单" in str(ip_error)
+
+    crop_error = WeChatAPIError(53402, "封面裁剪失败，请检查裁剪参数后重试")
+    assert "尺寸" in str(crop_error), "53402 应提示换正常尺寸图片"
 
 
 def test_error_text_has_no_credential_values():

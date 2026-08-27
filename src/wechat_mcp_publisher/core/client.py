@@ -252,6 +252,9 @@ def _image_file_field(filename: str, data: bytes) -> dict[str, Any]:
 
 
 def _json_of(response: requests.Response) -> dict[str, Any]:
+    # 微信部分接口返回 text/plain 无 charset，requests 会按 ISO-8859-1
+    # 解码导致中文 errmsg 乱码；微信 API 恒为 UTF-8，固定之
+    response.encoding = "utf-8"
     try:
         payload = response.json()
     except ValueError as exc:

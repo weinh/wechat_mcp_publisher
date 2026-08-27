@@ -115,6 +115,26 @@ def test_error_code_raised_with_hint():
 
 
 @responses.activate
+def test_chinese_errmsg_not_mojibake_on_text_plain():
+    """复现真机问题：text/plain 无 charset 时中文 errmsg 不得乱码。"""
+    responses.post(
+        DRAFT_LIST_URL,
+        body='{"errcode": 53402, "errmsg": "封面裁剪失败，请检查裁剪参数后重试"}'.encode(
+            "utf-8"
+        ),
+        content_type="text/plain",  # 无 charset → requests 默认 ISO-8859-1
+    )
+    token_response()
+    client = make_client()
+
+    with pytest.raises(WeChatAPIError) as excinfo:
+        client.list_drafts()
+
+    assert "封面裁剪失败" in str(excinfo.value), "中文 errmsg 应按 UTF-8 解码"
+    assert "å°" not in str(excinfo.value)
+
+
+@responses.activate
 def test_token_never_in_error_text():
     draft_list_response({"errcode": 40164, "errmsg": "invalid ip 1.2.3.4"})
     token_response()

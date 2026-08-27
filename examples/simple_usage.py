@@ -2,24 +2,41 @@
 
 用途：
 - 平时：直接阅读本文件了解工具链怎么串
-- 认证账号到位后：`uv run python examples/simple_usage.py` 逐步验证真机链路
+- 真机验证：`uv run python examples/simple_usage.py` 逐步验证链路
 
 预期失败点（按顺序暴露）：
   40164  调用方 IP 不在白名单 → 去公众号后台加白名单后重跑
-  48001  个人未认证订阅号无权调用素材/草稿接口 → 需已认证账号
+  40013/40125  AppID/AppSecret 有误 → 检查 .env
+  53402  封面裁剪失败 → 测试图太小（脚本已用 600×600，正常不会遇到）
 """
 
 from __future__ import annotations
 
-import shutil
+import struct
 import sys
 import tempfile
+import zlib
 from pathlib import Path
 
-# 造一张最小 jpg（1x1 像素）用于冒烟，可用真实图片路径替换
-_TINY_JPEG = bytes.fromhex(
-    "ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707070909080a0c140d0c0b0b0c1912130f141d1a1f1e1d1a1c1c20242e2720222c231c1c2837292c30313434341f27393d38323c2e333432ffc0000b080001000101011100ffc4001f0000010501010101010100000000000000000102030405060708090a0bffc400b5100002010303020403050504040000017d01020300041105122131410613516107227114328191a1082342b1c11552d1f02433627282090a161718191a25262728292a3435363738393a434445464748494a535455565758595a636465666768696a737475767778797a838485868788898a92939495969798999aa2a3a4a5a6a7a8a9aab2b3b4b5b6b7b8b9bac2c3c4c5c6c7c8c9cad2d3d4d5d6d7d8d9dae1e2e3e4e5e6e7e8e9eaf1f2f3f4f5f6f7f8f9faffda0008010100003f00fbfa28a2803ffd9"
-)
+
+def _smoke_png(width: int = 600, height: int = 600) -> bytes:
+    """生成纯色 PNG 冒烟图（不依赖外部素材；尺寸满足封面裁剪要求）。"""
+    sig = b"\x89PNG\r\n\x1a\n"
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        body = tag + data
+        return (
+            struct.pack(">I", len(data))
+            + body
+            + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)  # 8bit RGB
+    row = b"\x00" + b"\x30\x80\xff" * width
+    return (
+        sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(row * height, 6))
+        + chunk(b"IEND", b"")
+    )
 
 
 def main() -> int:
@@ -28,8 +45,8 @@ def main() -> int:
     from wechat_mcp_publisher.tools.draft import create_news_draft
 
     with tempfile.TemporaryDirectory() as tmp:
-        cover = Path(tmp) / "smoke-cover.jpg"
-        cover.write_bytes(_TINY_JPEG)
+        cover = Path(tmp) / "smoke-cover.png"
+        cover.write_bytes(_smoke_png())
 
         print("① 获取 access_token（内部自动，仅验证凭据与 IP 白名单）…")
         client = get_client()
