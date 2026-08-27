@@ -16,7 +16,7 @@
 - **THEN** 工具返回参数校验错误，不发起微信请求
 
 ### Requirement: 创建图片消息草稿（newspic）
-系统 SHALL 提供 `create_newspic_draft(title, content, images[], need_open_comment?, only_fans_can_comment?)` 工具：`content` 为必填纯文本说明（≤1000 字，非 HTML）；`images` 为 1~20 张本地图片路径或 http(s) URL；`need_open_comment` / `only_fans_can_comment` 为可选 bool 留言开关（解析规则见"可配置默认值三层解析"）。数量越界时返回明确错误。
+系统 SHALL 提供 `create_newspic_draft(title, content, images[], need_open_comment?, only_fans_can_comment?)` 工具：`content` 为必填文字说明（清洗后 ≤1000 字，含 HTML 标记时自动清洗为纯文本使用，实际内容回显在返回值）；`images` 为 1~20 张本地图片路径或 http(s) URL；`need_open_comment` / `only_fans_can_comment` 为可选 bool 留言开关（解析规则见"可配置默认值三层解析"）。数量越界时返回明确错误。
 
 #### Scenario: 正常创建
 - **WHEN** 传入 title、纯文本说明、2 张存在的图片路径
