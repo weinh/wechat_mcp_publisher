@@ -14,7 +14,7 @@
 ## ADDED Requirements
 
 ### Requirement: 草稿字段预校验
-创建工具 SHALL 在发起任何网络请求前完成字段校验，超限/非法即返回中文错误且 MUST NOT 上传图片或创建草稿：news 的 `title` ≤ 64 字、`digest` ≤ 120 字；newspic 的 `title` ≤ 20 字、`content` 必填且 ≤ 1000 字且 MUST NOT 含 HTML 标记。恰好等于上限的输入合法。
+创建工具 SHALL 在发起任何网络请求前完成字段校验，超限/非法即返回中文错误且 MUST NOT 上传图片或创建草稿：news 的 `title` ≤ 64 字、`digest` ≤ 120 字；newspic 的 `title` ≤ 20 字、`content` 必填且清洗后 ≤ 1000 字。恰好等于上限的输入合法。newspic 的 `content` 含 HTML 标记时 SHALL 自动清洗后使用（而非拒绝）：`<br>`/`</p>` 转换行、其余标签移除、HTML 实体反转义；清洗后的实际内容 SHALL 回显在返回值 `content` 字段。
 
 #### Scenario: 图文标题超长拒绝
 - **WHEN** news 的 `title` 为 65 字，其余参数合法
@@ -33,17 +33,21 @@
 - **THEN** 工具返回含当前字数与上限 20 字说明的错误（并点明图片消息与图文上限不同），未上传任何图片
 
 #### Scenario: 图片消息说明缺失拒绝
-- **WHEN** newspic 的 `content` 为空或全空白
+- **WHEN** newspic 的 `content` 为空、全空白、或清洗后无文字（仅有标签）
 - **THEN** 工具返回"content 不能为空"错误，未上传任何图片
 
 #### Scenario: 图片消息说明超长拒绝
-- **WHEN** newspic 的 `content` 为 1001 字
+- **WHEN** newspic 的 `content` 清洗后超过 1000 字
 - **THEN** 工具返回含当前字数与上限 1000 字说明的错误，未上传任何图片
 
-#### Scenario: 图片消息说明含 HTML 拒绝
-- **WHEN** newspic 的 `content` 含 HTML 标记（如 `<p>`、`<br/>`）
-- **THEN** 工具返回"必须是纯文本"错误并提示富文本改用 `create_news_draft`，未上传任何图片
+#### Scenario: 图片消息说明自动清洗
+- **WHEN** newspic 的 `content` 为 `<p>这不是<b>纯文本</b></p>`
+- **THEN** 草稿实际提交 `这不是纯文本\n`（标签移除、`</p>` 转换行），创建成功，返回值 `content` 字段回显清洗后内容
+
+#### Scenario: 清洗含换行与实体
+- **WHEN** newspic 的 `content` 为 `行一<br>行二 &amp; 更多`
+- **THEN** 实际提交 `行一\n行二 & 更多`
 
 #### Scenario: 普通文本中的尖括号不误伤
 - **WHEN** newspic 的 `content` 为 `3<5 是真话`
-- **THEN** 校验通过（非标签形态的 `<` 合法），继续创建流程
+- **THEN** 校验通过（非标签形态的 `<` 合法），内容原样提交

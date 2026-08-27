@@ -19,8 +19,8 @@
 **D3：报错信息带当前字数与上限，不静默截断/剥离**
 静默处理会让 LLM 以为原内容生效；报错让它自己改。摘要报错附"留空则微信自动截取正文"，HTML 拒绝报错附"富文本请改用 create_news_draft"。
 
-**D4：newspic `content` 必填 + 纯文本检测用标签正则**
-签名调整为 `(title, content, images)`，content 缺失/空白即报错。HTML 检测用 `</?[a-zA-Z][^>]*>`——只认"像标签"的片段，普通文本里的 `<`（如 "3<5"）不误伤；不检 HTML 实体（`&nbsp;` 等，误伤率高于收益）。**BREAKING**：content 原为可选，升 minor 版本（0.2.0）一并发布。
+**D4：newspic `content` 必填 + HTML 标记自动清洗（而非拒绝）**
+签名调整为 `(title, content, images)`，content 缺失/空白即报错。清洗规则：`<br>` 与 `</p>` 转换行（保留排版意图）、其余标签按 `</?[a-zA-Z][^>]*>` 移除（只认"像标签"的片段，普通文本里的 `<` 如 "3<5" 不误伤）、`html.unescape` 反转义实体。空与长度校验作用于**清洗后**文本（仅有标签没有文字视为空）；清洗后的内容回显在返回值 `content` 字段，让调用方（LLM）可核对实际提交内容。**BREAKING**：content 原为可选，升 minor 版本（0.2.0）一并发布。
 
 ## Risks / Trade-offs
 

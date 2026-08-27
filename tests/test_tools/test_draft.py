@@ -253,11 +253,32 @@ class TestNewspicFieldValidation:
             draft_tools.create_newspic_draft("标题", "文" * 1001, [str(img)])
         self._no_side_effects(fake)
 
-    def test_html_content_rejected(self, fake, tmp_path):
+    def test_html_tags_stripped_not_rejected(self, fake, tmp_path):
         img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
-        with pytest.raises(ValueError, match="纯文本"):
-            draft_tools.create_newspic_draft("标题", "<p>这不是纯文本</p>", [str(img)])
+        result = draft_tools.create_newspic_draft(
+            "标题", "<p>这不是<b>纯文本</b></p>", [str(img)]
+        )
+        cleaned = fake.drafts_created[0][0]["content"]
+        assert cleaned == "这不是纯文本\n", "标签剥离、</p> 转换行"
+        assert result["content"] == cleaned, "返回值带回实际使用的内容"
+
+    def test_br_and_entities_cleaned(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        draft_tools.create_newspic_draft("标题", "行一<br>行二 &amp; 更多", [str(img)])
+        assert fake.drafts_created[0][0]["content"] == "行一\n行二 & 更多"
+
+    def test_tags_only_content_counts_as_empty(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        with pytest.raises(ValueError, match="content 不能为空"):
+            draft_tools.create_newspic_draft("标题", "<br><p></p>", [str(img)])
         self._no_side_effects(fake)
+
+    def test_length_checked_after_cleaning(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        # 原文 1005 字符，剥离 10 个标签后 995 字 → 应通过
+        raw = "<b>字</b>" * 199 + "字" * 5
+        draft_tools.create_newspic_draft("标题", raw, [str(img)])
+        assert len(fake.drafts_created[0][0]["content"]) == 995
 
     def test_plain_angle_bracket_not_flagged(self, fake, tmp_path):
         img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
