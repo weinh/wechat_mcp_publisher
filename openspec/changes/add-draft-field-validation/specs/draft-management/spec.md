@@ -1,5 +1,20 @@
 ## MODIFIED Requirements
 
+### Requirement: 创建图文草稿（news）
+系统 SHALL 提供 `create_news_draft(title, content, cover, digest, author?, ...)` 工具：`content` 接受 HTML 字符串或本地 `.html` 文件路径（文件存在即视为路径，否则视为内容）；`cover` 接受本地路径或 http(s) URL；`digest` 为必填摘要（≤120 字，由调用方生成而非依赖微信截取正文）；内部完成内嵌图替换与封面上传后调用 `draft/add`，成功时返回草稿 `media_id`。
+
+#### Scenario: 最小参数成功
+- **WHEN** 传入 title、合法 HTML 内容、存在的封面图片路径与摘要
+- **THEN** 草稿创建成功，工具返回新草稿的 `media_id`
+
+#### Scenario: content 为文件路径
+- **WHEN** `content` 传入一个存在的 `.html` 文件路径
+- **THEN** 系统读取文件内容作为正文，流程与直接传 HTML 一致
+
+#### Scenario: 缺少必填参数
+- **WHEN** 未提供 title、cover 或 digest
+- **THEN** 工具返回参数校验错误，不发起微信请求
+
 ### Requirement: 创建图片消息草稿（newspic）
 系统 SHALL 提供 `create_newspic_draft(title, content, images[], need_open_comment?, only_fans_can_comment?)` 工具：`content` 为必填纯文本说明（≤1000 字，非 HTML）；`images` 为 1~20 张本地图片路径或 http(s) URL；`need_open_comment` / `only_fans_can_comment` 为可选 bool 留言开关（解析规则见"可配置默认值三层解析"）。数量越界时返回明确错误。
 
@@ -14,15 +29,19 @@
 ## ADDED Requirements
 
 ### Requirement: 草稿字段预校验
-创建工具 SHALL 在发起任何网络请求前完成字段校验，超限/非法即返回中文错误且 MUST NOT 上传图片或创建草稿：news 的 `title` ≤ 64 字、`digest` ≤ 120 字；newspic 的 `title` ≤ 20 字、`content` 必填且清洗后 ≤ 1000 字。恰好等于上限的输入合法。newspic 的 `content` 含 HTML 标记时 SHALL 自动清洗后使用（而非拒绝）：`<br>`/`</p>` 转换行、其余标签移除、HTML 实体反转义；清洗后的实际内容 SHALL 回显在返回值 `content` 字段。
+创建工具 SHALL 在发起任何网络请求前完成字段校验，超限/非法即返回中文错误且 MUST NOT 上传图片或创建草稿：news 的 `title` ≤ 64 字、`digest` 必填且 ≤ 120 字；newspic 的 `title` ≤ 20 字、`content` 必填且清洗后 ≤ 1000 字。恰好等于上限的输入合法。newspic 的 `content` 含 HTML 标记时 SHALL 自动清洗后使用（而非拒绝）：`<br>`/`</p>` 转换行、其余标签移除、HTML 实体反转义；清洗后的实际内容 SHALL 回显在返回值 `content` 字段。
 
 #### Scenario: 图文标题超长拒绝
 - **WHEN** news 的 `title` 为 65 字，其余参数合法
 - **THEN** 工具返回含"当前 65 字 / 上限 64 字"说明的错误，未发起任何上传与草稿创建
 
+#### Scenario: 图文摘要缺失拒绝
+- **WHEN** news 的 `digest` 为空或全空白
+- **THEN** 工具返回"digest 不能为空：请为文章生成一段摘要"错误，未发起网络请求
+
 #### Scenario: 图文摘要超长拒绝
 - **WHEN** news 的 `digest` 为 121 字
-- **THEN** 工具返回含当前字数与上限 120 字说明的错误（并提示留空可由微信自动截取正文），未发起网络请求
+- **THEN** 工具返回含当前字数与上限 120 字说明的错误，未发起网络请求
 
 #### Scenario: 图文边界值通过
 - **WHEN** news 的 `title` 恰为 64 字且 `digest` 恰为 120 字

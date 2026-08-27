@@ -48,15 +48,16 @@ def _clean_newspic_content(content: str) -> str:
 
 
 def _validate_news_fields(title: str, digest: str) -> None:
-    """本地预校验图文字段长度（微信上限：标题 64 字、摘要 120 字）。"""
+    """本地预校验图文字段（标题 64 字；摘要必填、120 字）。"""
     if len(title) > NEWS_TITLE_MAX_CHARS:
         raise ValueError(
             f"标题超长：当前 {len(title)} 字，微信上限 {NEWS_TITLE_MAX_CHARS} 字"
         )
+    if not (digest or "").strip():
+        raise ValueError("digest 不能为空：请为文章生成一段摘要（上限 120 字）")
     if len(digest) > NEWS_DIGEST_MAX_CHARS:
         raise ValueError(
             f"摘要超长：当前 {len(digest)} 字，微信上限 {NEWS_DIGEST_MAX_CHARS} 字"
-            "（留空则微信自动截取正文）"
         )
 
 
@@ -104,8 +105,8 @@ def create_news_draft(
     title: str,
     content: str,
     cover: str,
+    digest: str,
     author: Optional[str] = None,
-    digest: str = "",
     content_source_url: str = "",
     need_open_comment: Optional[bool] = None,
     only_fans_can_comment: Optional[bool] = None,
@@ -117,8 +118,9 @@ def create_news_draft(
       content: 正文。支持两种形态——HTML 字符串，或本地 .html 文件路径
                （若该路径存在则自动读取文件，否则按 HTML 内容处理）
       cover: 封面图片（必填）：本地文件路径或 http(s) URL，自动上传为封面素材
+      digest: 摘要（必填，上限 120 字）。AI 场景下应由模型生成，
+              不依赖微信"截取正文"的兜底行为
       author: 作者名（可选，不传用 .env 或默认空；传空字符串可显式覆盖 .env）
-      digest: 摘要（可选，上限 120 字，留空时微信自动截取正文）
       content_source_url: 原文链接（可选）
       need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
       only_fans_can_comment: 是否仅粉丝可评论（可选，不传用 .env 或默认关闭）

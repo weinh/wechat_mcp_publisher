@@ -80,7 +80,7 @@ def inline_image(tmp_path):
 class TestCreateNewsDraft:
     def test_minimal_success(self, fake, cover, inline_image):
         html = f'<p>正文</p><img src="{inline_image}">'
-        result = draft_tools.create_news_draft("标题", html, cover)
+        result = draft_tools.create_news_draft("标题", html, cover, "摘要")
 
         assert result == {
             "media_id": "DRAFT-ID-1",
@@ -95,23 +95,23 @@ class TestCreateNewsDraft:
     def test_content_as_file_path(self, fake, cover, tmp_path):
         article = tmp_path / "article.html"
         article.write_text("<p>来自文件的内容</p>", encoding="utf-8")
-        result = draft_tools.create_news_draft("文件标题", str(article), cover)
+        result = draft_tools.create_news_draft("文件标题", str(article), cover, "摘要")
         assert result["media_id"] == "DRAFT-ID-1"
         assert fake.drafts_created[0][0]["content"] == "<p>来自文件的内容</p>"
 
     def test_missing_title_no_api_calls(self, fake, cover):
         with pytest.raises(ValueError, match="title"):
-            draft_tools.create_news_draft("  ", "<p>x</p>", cover)
+            draft_tools.create_news_draft("  ", "<p>x</p>", cover, "摘要")
         assert fake.drafts_created == [] and fake.permanent_uploads == []
 
     def test_missing_cover_no_api_calls(self, fake):
         with pytest.raises(FileNotFoundError, match="不存在"):
-            draft_tools.create_news_draft("标题", "<p>x</p>", "/no/such/cover.jpg")
+            draft_tools.create_news_draft("标题", "<p>x</p>", "/no/such/cover.jpg", "摘要")
         assert fake.drafts_created == [] and fake.permanent_uploads == []
 
     def test_empty_content_rejected(self, fake, cover):
         with pytest.raises(ValueError, match="content"):
-            draft_tools.create_news_draft("标题", "   ", cover)
+            draft_tools.create_news_draft("标题", "   ", cover, "摘要")
         assert fake.drafts_created == []
 
 
@@ -162,7 +162,7 @@ class TestCommentFlags:
         return fake.drafts_created[0][0]
 
     def test_builtin_defaults_on_news(self, fake, cover):
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要")
         article = self._article(fake)
         assert article["need_open_comment"] == 1
         assert article["only_fans_can_comment"] == 0
@@ -171,7 +171,7 @@ class TestCommentFlags:
     def test_env_overrides_builtin(self, fake, cover):
         fake.config = Config(app_id="x", app_secret="y", need_open_comment=False,
                              only_fans_can_comment=True)
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要")
         article = self._article(fake)
         assert article["need_open_comment"] == 0
         assert article["only_fans_can_comment"] == 1
@@ -179,7 +179,7 @@ class TestCommentFlags:
     def test_param_overrides_env(self, fake, cover):
         fake.config = Config(app_id="x", app_secret="y", need_open_comment=True,
                              only_fans_can_comment=True)
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover,
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要",
                                       need_open_comment=False,
                                       only_fans_can_comment=False)
         article = self._article(fake)
@@ -214,7 +214,12 @@ class TestNewsFieldValidation:
 
     def test_title_over_64_rejected(self, fake, cover):
         with pytest.raises(ValueError, match="64"):
-            draft_tools.create_news_draft("标" * 65, "<p>x</p>", cover)
+            draft_tools.create_news_draft("标" * 65, "<p>x</p>", cover, "摘要")
+        assert fake.drafts_created == [] and fake.permanent_uploads == []
+
+    def test_empty_digest_rejected(self, fake, cover):
+        with pytest.raises(ValueError, match="digest"):
+            draft_tools.create_news_draft("标题", "<p>x</p>", cover, "   ")
         assert fake.drafts_created == [] and fake.permanent_uploads == []
 
     def test_digest_over_120_rejected(self, fake, cover):
@@ -300,22 +305,22 @@ class TestAuthorResolution:
         return fake.drafts_created[0][0]
 
     def test_builtin_default_empty(self, fake, cover):
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要")
         assert self._article(fake)["author"] == ""
 
     def test_env_author(self, fake, cover):
         fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要")
         assert self._article(fake)["author"] == "公众号编辑"
 
     def test_param_overrides_env(self, fake, cover):
         fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover, author="特邀作者")
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要", author="特邀作者")
         assert self._article(fake)["author"] == "特邀作者"
 
     def test_explicit_empty_overrides_env(self, fake, cover):
         fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
-        draft_tools.create_news_draft("标题", "<p>x</p>", cover, author="")
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, "摘要", author="")
         assert self._article(fake)["author"] == ""
 
 

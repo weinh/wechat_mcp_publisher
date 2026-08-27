@@ -12,3 +12,8 @@
 
 - [x] 3.1 `_clean_newspic_content()`：`<br>`/`</p>` 转换行、其余标签移除、`html.unescape` 反转义；空与长度校验作用于清洗后文本（仅有标签视为空）；返回值回显 `content`
 - [x] 3.2 测试改写：含 HTML 自动清洗并断言实际载荷、`<br>`/实体场景、仅有标签视为空、限长按清洗后计（原文超限但清洗后合法应通过）、"3<5" 不误伤；工件（proposal/design/spec）同步
+
+## 4. digest 必填（扩展需求）
+
+- [x] 4.1 `create_news_draft` 签名调整为 `(title, content, cover, digest, ...)`；digest 空/全空白报错"请为文章生成一段摘要"；超长报错去掉"留空截取正文"提示；docstring 更新
+- [x] 4.2 全部既有调用点补 digest；新增"digest 缺失拒绝（零副作用）"测试；工件（proposal/design/spec MODIFIED news requirement）同步

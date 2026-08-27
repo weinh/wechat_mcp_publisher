@@ -4,14 +4,14 @@
 
 ## What Changes
 
-- `create_news_draft` 入口新增长度预校验：`title` ≤ 64 字、`digest` ≤ 120 字
+- `create_news_draft` 入口新增长度预校验：`title` ≤ 64 字、`digest` **变为必填**且 ≤ 120 字（AI 场景下摘要应由模型生成，不依赖微信"截取正文"的兜底）
 - `create_newspic_draft` 入口新增预校验：`title` ≤ 20 字（图片消息上限，与图文不同）；`content` **变为必填**、清洗后 ≤ 1000 字
 - `content` 若带 HTML 标记则**自动清洗**而非拒绝：标签移除、`<br>`/`</p>` 转换行、HTML 实体（`&amp;` 等）反转义；仅有标签没有文字视为空；实际使用的内容回显在返回值 `content` 字段
 - 超限时抛出含"当前字数/上限"的中文错误，且**不发起任何网络请求**（不上传图片、不建草稿）
 - 边界值（恰好 64/120、20/1000 字）合法
 - docstring 标注各字段上限
 
-**BREAKING**：`create_newspic_draft` 的 `content` 从可选变为必填（签名调整为 `title, content, images`），旧调用不传 content 将被 schema 拒绝——赶在 0.2.0 发版前落地。
+**BREAKING**：① `create_newspic_draft` 的 `content` 从可选变为必填（签名 `title, content, images`）② `create_news_draft` 的 `digest` 从可选变为必填（签名 `title, content, cover, digest, ...`）。旧调用将被 schema 拒绝——随 0.2.0 发版落地。
 
 ## Capabilities
 
