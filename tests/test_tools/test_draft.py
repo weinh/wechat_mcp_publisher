@@ -275,10 +275,10 @@ class TestNewspicFieldValidation:
 
     def test_length_checked_after_cleaning(self, fake, tmp_path):
         img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
-        # 原文 1005 字符，剥离 10 个标签后 995 字 → 应通过
-        raw = "<b>字</b>" * 199 + "字" * 5
+        # 原文 130×8=1040 字符（超 1000 上限），剥离标签后 130 字 → 应通过
+        raw = "<b>字</b>" * 130
         draft_tools.create_newspic_draft("标题", raw, [str(img)])
-        assert len(fake.drafts_created[0][0]["content"]) == 995
+        assert len(fake.drafts_created[0][0]["content"]) == 130
 
     def test_plain_angle_bracket_not_flagged(self, fake, tmp_path):
         img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
