@@ -4,10 +4,12 @@
 
 ## What Changes
 
-- `core/client.py::_json_of` 解析前强制 `response.encoding = "utf-8"`，杜绝中文乱码
-- `core/exceptions.py` 错误表新增 `53402`（封面裁剪失败）提示：建议使用正常尺寸图片；`48001` 提示措辞纠偏（去掉"个人未认证订阅号不支持"的错误断言）
+- **P0：`core/client.py::_request` 请求体改为字面 UTF-8**（`json.dumps(..., ensure_ascii=False)`）——微信草稿接口会把 `\uXXXX` 转义当字面文本入库，此前所有经 API 建的中文草稿标题/内容全是 `每日...` 乱码（真机回环已验证修复：中文入库回读正常）。`stable_token` 请求体同改保持一致
+- `core/client.py::_json_of` 解析前强制 `response.encoding = "utf-8"`，杜绝响应侧中文乱码
+- `core/client.py::list_drafts` 总数字段修正：微信实际返回 `total_count`（此前读 `total_item_count` 恒为 0）
+- `core/exceptions.py` 错误表新增 `53402`（封面裁剪失败）提示：建议使用正常尺寸图片；`48001` 提示措辞纠偏
 - `examples/simple_usage.py` 弃用坏 hex，改为程序生成 600×600 PNG（兼顾封面对裁剪尺寸的要求）
-- README 与 `server/app.py` 服务器说明中的 48001 表述更新为实测结论
+- README 与 `server/app.py` 服务器说明中的 48001 表述更新为实测结论（素材/草稿可用；`freepublish` 实测 48001 确为认证墙）
 
 ## Capabilities
 

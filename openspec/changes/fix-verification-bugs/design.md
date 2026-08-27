@@ -22,6 +22,12 @@
 **D4：48001 表述统一为"实测可用 + 提示保留但纠偏"**
 错误表里 48001 的提示仍保留（部分接口/账号类型确实受限），但删去被推翻的"个人未认证订阅号不支持"断言；README 已知限制段改写为实测事实与 53402 经验。
 
+**D5：请求体字面 UTF-8（P0）**
+真机实证：微信 draft 接口把 `\uXXXX` 转义按字面入库（草稿箱标题显示 `每日...`）。修复 = 所有 JSON 请求体用 `json.dumps(ensure_ascii=False).encode("utf-8")` + 显式 `Content-Type: application/json`，不再走 requests 的 `json=`（其默认 ensure_ascii=True）。已用"建中文草稿 → batchget 回读"真机回环验证。备选：仅 draft 接口特判——不一致且下次别的接口再踩坑。
+
+**D6：list_drafts 总数读 `total_count`**
+真机 batchget 返回 `total_count`/`item_count`，旧代码读 `total_item_count` 恒 0。以实测字段为准，mock 同步改真实键名。
+
 ## Risks / Trade-offs
 
 - [固定 UTF-8 若遇非 UTF-8 响应] → 微信 API 无此形态，风险可忽略

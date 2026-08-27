@@ -30,7 +30,8 @@ def token_response(body=None):
 
 def draft_list_response(body=None):
     return responses.post(
-        DRAFT_LIST_URL, json=body or {"total_item_count": 0, "item": [], "offset": 0}
+        DRAFT_LIST_URL,
+        json=body or {"total_count": 0, "item_count": 0, "item": [], "offset": 0},
     )
 
 
@@ -74,7 +75,7 @@ def test_token_refreshed_when_near_expiry():
 def test_retry_once_on_expired_token_then_succeed():
     # 业务请求先 40001，刷新 token 后重试成功
     draft_list_response({"errcode": 40001, "errmsg": "invalid credential"})
-    draft_list_response({"total_item_count": 0, "item": [], "offset": 0})
+    draft_list_response({"total_count": 0, "item_count": 0, "item": [], "offset": 0})
     token_response()
     token_response()
     client = make_client()
@@ -132,6 +133,25 @@ def test_chinese_errmsg_not_mojibake_on_text_plain():
 
     assert "封面裁剪失败" in str(excinfo.value), "中文 errmsg 应按 UTF-8 解码"
     assert "å°" not in str(excinfo.value)
+
+
+@responses.activate
+def test_json_body_sent_as_utf8_literal():
+    """P0 复现：请求体必须是字面 UTF-8，微信会把 \\u 转义当文本入库。"""
+    responses.post(f"{BASE}/cgi-bin/draft/add", json={"media_id": "M1"})
+    token_response()
+    client = make_client()
+
+    client.create_draft([{"title": "每日口算练习卷", "content": "纯文本说明"}])
+
+    body = [
+        c.request.body
+        for c in responses.calls
+        if "draft/add" in c.request.url
+    ][0]
+    assert "每日口算练习卷".encode("utf-8") in body, "中文字面 UTF-8 上线"
+    assert b"\\u6bcf" not in body, "不得出现 \\uXXXX 转义"
+    assert b"\\u7eaf" not in body
 
 
 @responses.activate

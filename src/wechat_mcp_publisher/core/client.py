@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, Mapping
 
@@ -56,11 +57,14 @@ class WeChatClient:
             self._log.debug("强制刷新 access_token")
         response = requests.post(
             f"{BASE_URL}/cgi-bin/stable_token",
-            json={
-                "grant_type": "client_credential",
-                "appid": self._config.app_id,
-                "secret": self._config.app_secret,
-            },
+            data=json.dumps(
+                {
+                    "grant_type": "client_credential",
+                    "appid": self._config.app_id,
+                    "secret": self._config.app_secret,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
             timeout=_TIMEOUT,
         )
         payload = _json_of(response)
@@ -104,11 +108,19 @@ class WeChatClient:
     ) -> dict[str, Any]:
         params = dict(params or {})
         params["access_token"] = self._ensure_token()
+        # 关键：请求体用字面 UTF-8 而非 \u 转义。微信草稿接口会把
+        # \uXXXX 转义当字面文本入库（标题/内容全变 每... 乱码）
+        data = None
+        headers = None
+        if json_body is not None:
+            data = json.dumps(json_body, ensure_ascii=False).encode("utf-8")
+            headers = {"Content-Type": "application/json"}
         response = requests.request(
             method,
             f"{BASE_URL}{path}",
             params=params,
-            json=json_body,
+            data=data,
+            headers=headers,
             files=files,
             timeout=timeout,
         )
@@ -187,7 +199,8 @@ class WeChatClient:
             for item in payload.get("item", [])
         ]
         return DraftPage(
-            total=int(payload.get("total_item_count", 0) or 0),
+            # 微信 batchget 实际返回 total_count / item_count（非 total_item_count）
+            total=int(payload.get("total_count", 0) or 0),
             offset=int(payload.get("offset", offset) or offset),
             items=items,
         )

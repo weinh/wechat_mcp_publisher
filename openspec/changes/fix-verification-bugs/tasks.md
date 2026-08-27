@@ -5,3 +5,9 @@
 - [x] 1.3 `examples/simple_usage.py`：坏 hex JPEG 替换为程序生成的 600×600 PNG（zlib+struct）
 - [x] 1.4 48001 表述纠偏：`server/app.py` 服务器说明、README 已知限制段（改写为实测结论 + 53402 经验）
 - [x] 1.5 全量测试 + 提交推送
+
+## 2. 发布探测扩展发现（同日）
+
+- [x] 2.1 P0：`_request` 与 `stable_token` 请求体改字面 UTF-8（微信把 `\u` 转义当文本入库）；真机回环验证（中文标题入库回读正常）；测试断言请求体含字面中文且无 `\uXXXX`
+- [x] 2.2 `list_drafts` 总数改读 `total_count`（实测键名）；mock 契约同步真实键名
+- [x] 2.3 `freepublish/submit` 真机实测 48001：确认为认证墙（记录进 README/记忆），publish 工具维持"等认证"路线
