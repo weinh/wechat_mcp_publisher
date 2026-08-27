@@ -58,7 +58,7 @@ class TestLoadConfigFlags:
         monkeypatch.setenv("WECHAT_APP_ID", "id")
         monkeypatch.setenv("WECHAT_APP_SECRET", "secret")
         monkeypatch.setenv("WECHAT_AUTHOR", raw)
-        assert load_config().author is expected
+        assert load_config().author == expected
 
     @pytest.mark.parametrize(
         "raw,expected",
