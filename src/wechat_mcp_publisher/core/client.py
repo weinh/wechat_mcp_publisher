@@ -42,6 +42,11 @@ class WeChatClient:
         self._token_expires_at: float = 0.0
         self._log = get_logger()
 
+    @property
+    def config(self) -> Config:
+        """只读配置（工具层用于行为开关解析，凭据仍在内部管理）。"""
+        return self._config
+
     # ------------------------------------------------------------------
     # token 生命周期（不对外暴露）
     # ------------------------------------------------------------------

@@ -6,13 +6,43 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
+from ..config import (
+    DEFAULT_NEED_OPEN_COMMENT,
+    DEFAULT_ONLY_FANS_CAN_COMMENT,
+    resolve_flag,
+)
 from ..core.client import get_client
 from ..utils.helpers import load_image, replace_inline_images, resolve_content
 
 NEWSPIC_MIN_IMAGES = 1
 NEWSPIC_MAX_IMAGES = 20
+
+
+def _resolve_comment_flags(
+    client,
+    need_open_comment: Optional[bool],
+    only_fans_can_comment: Optional[bool],
+) -> dict[str, int]:
+    """三层解析留言开关（入参 > .env > 内置默认），输出微信要求的 0/1 整数。"""
+    cfg = client.config
+    return {
+        "need_open_comment": int(
+            resolve_flag(
+                need_open_comment,
+                cfg.need_open_comment,
+                DEFAULT_NEED_OPEN_COMMENT,
+            )
+        ),
+        "only_fans_can_comment": int(
+            resolve_flag(
+                only_fans_can_comment,
+                cfg.only_fans_can_comment,
+                DEFAULT_ONLY_FANS_CAN_COMMENT,
+            )
+        ),
+    }
 
 
 def create_news_draft(
@@ -22,6 +52,8 @@ def create_news_draft(
     author: str = "",
     digest: str = "",
     content_source_url: str = "",
+    need_open_comment: Optional[bool] = None,
+    only_fans_can_comment: Optional[bool] = None,
 ) -> dict[str, Any]:
     """创建图文草稿（news），成功返回 {"media_id": ..., "title": ..., "cover_url": ...}。
 
@@ -33,6 +65,8 @@ def create_news_draft(
       author: 作者名（可选）
       digest: 摘要（可选，留空时微信自动截取正文）
       content_source_url: 原文链接（可选）
+      need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
+      only_fans_can_comment: 是否仅粉丝可评论（可选，不传用 .env 或默认关闭）
 
     正文 HTML 中的 <img> 会自动上传到微信并替换 src 为微信托管的 URL；
     已指向微信域名（mmbiz.qpic.cn / mp.weixin.qq.com）的图片保持不变。
@@ -63,8 +97,7 @@ def create_news_draft(
         "content": processed_html,
         "content_source_url": content_source_url,
         "thumb_media_id": material.media_id,
-        "need_open_comment": 0,
-        "only_fans_can_comment": 0,
+        **_resolve_comment_flags(client, need_open_comment, only_fans_can_comment),
     }
     media_id = client.create_draft([article])
     return {"media_id": media_id, "title": title, "cover_url": material.url}
@@ -74,6 +107,8 @@ def create_newspic_draft(
     title: str,
     images: list[str],
     content: str = "",
+    need_open_comment: Optional[bool] = None,
+    only_fans_can_comment: Optional[bool] = None,
 ) -> dict[str, Any]:
     """创建图片消息草稿（newspic），成功返回 {"media_id": ..., "title": ..., "image_count": ...}。
 
@@ -81,6 +116,8 @@ def create_newspic_draft(
       title: 消息标题（必填）
       images: 1~20 张图片，按传入顺序展示；每项为本地文件路径或 http(s) URL
       content: 图片下方的纯文字说明（可选，注意不是 HTML）
+      need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
+      only_fans_can_comment: 是否仅粉丝可评论（可选，不传用 .env 或默认关闭）
 
     与图文消息不同：图片消息的 content 是纯文本，图片本体在 images 中，
     全部经永久素材接口上传后按序组装。
@@ -108,8 +145,7 @@ def create_newspic_draft(
         "title": title,
         "content": content or "",
         "image_info": {"image_list": image_list},
-        "need_open_comment": 0,
-        "only_fans_can_comment": 0,
+        **_resolve_comment_flags(client, need_open_comment, only_fans_can_comment),
     }
     media_id = client.create_draft([article])
     return {"media_id": media_id, "title": title, "image_count": len(image_list)}

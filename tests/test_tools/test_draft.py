@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from wechat_mcp_publisher.config import Config
 from wechat_mcp_publisher.core.exceptions import WeChatAPIError
 from wechat_mcp_publisher.core.models import DraftPage, DraftSummary, MaterialImage
 from wechat_mcp_publisher.tools import draft as draft_tools
@@ -14,6 +15,7 @@ TINY_JPG = b"\xff\xd8\xff\xe0fakejpg"
 
 class FakeClient:
     def __init__(self):
+        self.config = Config(app_id="x", app_secret="y")  # 开关均 None=未设置
         self.inline_uploads: list[str] = []
         self.permanent_uploads: list[str] = []
         self.drafts_created: list[list[dict]] = []
@@ -150,6 +152,58 @@ class TestCreateNewspicDraft:
         with pytest.raises(WeChatAPIError):
             draft_tools.create_newspic_draft("中途失败", paths)
         assert fake.drafts_created == [], "任一图片失败不得创建草稿"
+
+
+class TestCommentFlags:
+    """三层优先级：入参 > .env(Config) > 内置默认（need=1 / only_fans=0）。"""
+
+    def _article(self, fake) -> dict:
+        assert fake.drafts_created, "应已创建草稿"
+        return fake.drafts_created[0][0]
+
+    def test_builtin_defaults_on_news(self, fake, cover):
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        article = self._article(fake)
+        assert article["need_open_comment"] == 1
+        assert article["only_fans_can_comment"] == 0
+        assert isinstance(article["need_open_comment"], int)
+
+    def test_env_overrides_builtin(self, fake, cover):
+        fake.config = Config(app_id="x", app_secret="y", need_open_comment=False,
+                             only_fans_can_comment=True)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        article = self._article(fake)
+        assert article["need_open_comment"] == 0
+        assert article["only_fans_can_comment"] == 1
+
+    def test_param_overrides_env(self, fake, cover):
+        fake.config = Config(app_id="x", app_secret="y", need_open_comment=True,
+                             only_fans_can_comment=True)
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover,
+                                      need_open_comment=False,
+                                      only_fans_can_comment=False)
+        article = self._article(fake)
+        assert article["need_open_comment"] == 0
+        assert article["only_fans_can_comment"] == 0
+
+    def test_flags_on_newspic(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"
+        img.write_bytes(TINY_JPG)
+        # .env 层未设置 → 内置默认；入参显式关留言
+        draft_tools.create_newspic_draft("标题", [str(img)],
+                                         need_open_comment=False)
+        article = self._article(fake)
+        assert article["need_open_comment"] == 0
+        assert article["only_fans_can_comment"] == 0
+
+    def test_newspic_env_override(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"
+        img.write_bytes(TINY_JPG)
+        fake.config = Config(app_id="x", app_secret="y", only_fans_can_comment=True)
+        draft_tools.create_newspic_draft("标题", [str(img)])
+        article = self._article(fake)
+        assert article["need_open_comment"] == 1, "未配置项走内置默认"
+        assert article["only_fans_can_comment"] == 1, ".env 改写默认"
 
 
 class TestMaterialTools:

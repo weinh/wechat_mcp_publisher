@@ -16,6 +16,20 @@
 
 `access_token` 由内部获取、缓存、失效自愈（`stable_token` + 40001/42001 自动刷新重试一次），**不暴露为工具**。错误统一转为带处置提示的中文信息（如 40164 提示加 IP 白名单、48001 提示需认证账号），且不含凭据。
 
+## 留言开关
+
+两个创建工具都支持 `need_open_comment`（开启留言）与 `only_fans_can_comment`（仅粉丝可评论），按三层优先级解析：
+
+```
+工具入参（true/false） > .env 变量 > 内置默认
+```
+
+内置默认：开启留言、不限制仅粉丝。想改写默认值，在 `.env` 里设置 `WECHAT_NEED_OPEN_COMMENT` / `WECHAT_ONLY_FANS_CAN_COMMENT`（接受 1/0/true/false）：
+
+```bash
+WECHAT_NEED_OPEN_COMMENT=0      # 整个账号默认关闭留言，个别文章仍可传参开启
+```
+
 ## 安装
 
 ```bash
