@@ -206,6 +206,29 @@ class TestCommentFlags:
         assert article["only_fans_can_comment"] == 1, ".env 改写默认"
 
 
+class TestNewsFieldValidation:
+    """长度预校验：title ≤64 字、digest ≤120 字，超限零网络副作用。"""
+
+    def _article(self, fake) -> dict:
+        return fake.drafts_created[0][0]
+
+    def test_title_over_64_rejected(self, fake, cover):
+        with pytest.raises(ValueError, match="64"):
+            draft_tools.create_news_draft("标" * 65, "<p>x</p>", cover)
+        assert fake.drafts_created == [] and fake.permanent_uploads == []
+
+    def test_digest_over_120_rejected(self, fake, cover):
+        with pytest.raises(ValueError, match="120"):
+            draft_tools.create_news_draft("标题", "<p>x</p>", cover, digest="摘" * 121)
+        assert fake.drafts_created == [] and fake.permanent_uploads == []
+
+    def test_boundary_64_120_passes(self, fake, cover):
+        draft_tools.create_news_draft("标" * 64, "<p>x</p>", cover, digest="摘" * 120)
+        article = self._article(fake)
+        assert article["title"] == "标" * 64
+        assert article["digest"] == "摘" * 120
+
+
 class TestAuthorResolution:
     """作者名三层：入参 > .env(WECHAT_AUTHOR) > 内置默认空串。"""
 

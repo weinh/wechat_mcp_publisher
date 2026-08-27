@@ -20,6 +20,23 @@ from ..utils.helpers import load_image, replace_inline_images, resolve_content
 NEWSPIC_MIN_IMAGES = 1
 NEWSPIC_MAX_IMAGES = 20
 
+# 微信图文硬性上限（按字符计）：超限在本地预校验，避免上传图片后才失败
+NEWS_TITLE_MAX_CHARS = 64
+NEWS_DIGEST_MAX_CHARS = 120
+
+
+def _validate_news_fields(title: str, digest: str) -> None:
+    """本地预校验图文字段长度（微信上限：标题 64 字、摘要 120 字）。"""
+    if len(title) > NEWS_TITLE_MAX_CHARS:
+        raise ValueError(
+            f"标题超长：当前 {len(title)} 字，微信上限 {NEWS_TITLE_MAX_CHARS} 字"
+        )
+    if len(digest) > NEWS_DIGEST_MAX_CHARS:
+        raise ValueError(
+            f"摘要超长：当前 {len(digest)} 字，微信上限 {NEWS_DIGEST_MAX_CHARS} 字"
+            "（留空则微信自动截取正文）"
+        )
+
 
 def _resolve_comment_flags(
     client,
@@ -59,12 +76,12 @@ def create_news_draft(
     """创建图文草稿（news），成功返回 {"media_id": ..., "title": ..., "cover_url": ...}。
 
     参数：
-      title: 文章标题（必填）
+      title: 文章标题（必填，上限 64 字）
       content: 正文。支持两种形态——HTML 字符串，或本地 .html 文件路径
                （若该路径存在则自动读取文件，否则按 HTML 内容处理）
       cover: 封面图片（必填）：本地文件路径或 http(s) URL，自动上传为封面素材
       author: 作者名（可选，不传用 .env 或默认空；传空字符串可显式覆盖 .env）
-      digest: 摘要（可选，留空时微信自动截取正文）
+      digest: 摘要（可选，上限 120 字，留空时微信自动截取正文）
       content_source_url: 原文链接（可选）
       need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
       only_fans_can_comment: 是否仅粉丝可评论（可选，不传用 .env 或默认关闭）
@@ -75,6 +92,7 @@ def create_news_draft(
     title = (title or "").strip()
     if not title:
         raise ValueError("title 不能为空")
+    _validate_news_fields(title, digest or "")
 
     content_html = resolve_content(content or "")
     if not content_html.strip():
