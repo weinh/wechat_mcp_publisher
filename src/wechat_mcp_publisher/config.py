@@ -15,10 +15,12 @@ APP_ID_ENV = "WECHAT_APP_ID"
 APP_SECRET_ENV = "WECHAT_APP_SECRET"
 NEED_OPEN_COMMENT_ENV = "WECHAT_NEED_OPEN_COMMENT"
 ONLY_FANS_CAN_COMMENT_ENV = "WECHAT_ONLY_FANS_CAN_COMMENT"
+AUTHOR_ENV = "WECHAT_AUTHOR"
 
-# 留言开关内置默认（入参 > .env > 此处）
+# 可配置默认值（优先级：入参 > .env > 此处）
 DEFAULT_NEED_OPEN_COMMENT = True
 DEFAULT_ONLY_FANS_CAN_COMMENT = False
+DEFAULT_AUTHOR = ""
 
 _TRUTHY = frozenset({"1", "true", "yes"})
 _FALSY = frozenset({"0", "false", "no"})
@@ -40,12 +42,13 @@ class ConfigError(RuntimeError):
 
 @dataclass(frozen=True)
 class Config:
-    """单账号凭据与行为开关（None = 未设置，走内置默认）。"""
+    """单账号凭据与行为开关/默认值（None = 未设置，走内置默认）。"""
 
     app_id: str
     app_secret: str
     need_open_comment: Optional[bool] = None
     only_fans_can_comment: Optional[bool] = None
+    author: Optional[str] = None
 
 
 def load_config() -> Config:
@@ -72,15 +75,16 @@ def load_config() -> Config:
         app_secret=app_secret,
         need_open_comment=_parse_flag(NEED_OPEN_COMMENT_ENV),
         only_fans_can_comment=_parse_flag(ONLY_FANS_CAN_COMMENT_ENV),
+        author=_parse_optional_str(AUTHOR_ENV),
     )
 
 
-def resolve_flag(
-    param: Optional[bool],
-    env_value: Optional[bool],
-    builtin: bool,
-) -> bool:
-    """三层优先级解析：用户入参 > .env 变量 > 内置默认。"""
+def resolve_setting(
+    param: Optional[object],
+    env_value: Optional[object],
+    builtin: object,
+) -> object:
+    """三层优先级解析（通用，bool/str 皆可）：用户入参 > .env 变量 > 内置默认。"""
     if param is not None:
         return param
     if env_value is not None:
@@ -101,3 +105,12 @@ def _parse_flag(env_name: str) -> Optional[bool]:
     raise ConfigError(
         f"环境变量 {env_name} 的值「{raw}」无法识别：仅接受 1/0/true/false（不区分大小写）"
     )
+
+
+def _parse_optional_str(env_name: str) -> Optional[str]:
+    """解析可选字符串环境变量；未设置或空白返回 None。"""
+    raw = os.getenv(env_name)
+    if raw is None:
+        return None
+    value = raw.strip()
+    return value or None

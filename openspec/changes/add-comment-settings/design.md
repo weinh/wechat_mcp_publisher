@@ -23,8 +23,8 @@ MCP schema 对 LLM 而言 bool 比 0/1 更不易传错；`None` 表示"未指定
 **D3：工具通过 `get_client().config` 取配置，避免二次 `load_config()`**
 `WeChatClient` 增加只读属性 `config`，客户端单例即配置单例，两个创建工具共用。备选：工具里再调 `load_config()`——每次调用重复解析，且未来多配置源时两处维护。
 
-**D4：解析顺序实现为一处 `resolve_flag(param, env_value, builtin)`**
-三行纯函数放 `config.py`，单测直测，两个工具两个字段共用，杜绝四处复制优先级逻辑。
+**D4：解析顺序实现为一处通用纯函数 `resolve_setting(param, env_value, builtin)`**
+三行纯函数放 `config.py`，bool/str 通用，两个工具三个字段共用，杜绝四处复制优先级逻辑。作者名用 `Optional[str]`：`None` 走配置链，空字符串是显式入参（可压过 `.env` 清空默认值）；`WECHAT_AUTHOR` 值首尾去空白、空白视为未设置。作者仅 news 生效——微信 newspic 草稿结构无作者字段。
 
 ## Risks / Trade-offs
 

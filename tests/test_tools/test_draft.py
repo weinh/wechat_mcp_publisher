@@ -206,6 +206,32 @@ class TestCommentFlags:
         assert article["only_fans_can_comment"] == 1, ".env 改写默认"
 
 
+class TestAuthorResolution:
+    """作者名三层：入参 > .env(WECHAT_AUTHOR) > 内置默认空串。"""
+
+    def _article(self, fake) -> dict:
+        return fake.drafts_created[0][0]
+
+    def test_builtin_default_empty(self, fake, cover):
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        assert self._article(fake)["author"] == ""
+
+    def test_env_author(self, fake, cover):
+        fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover)
+        assert self._article(fake)["author"] == "公众号编辑"
+
+    def test_param_overrides_env(self, fake, cover):
+        fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, author="特邀作者")
+        assert self._article(fake)["author"] == "特邀作者"
+
+    def test_explicit_empty_overrides_env(self, fake, cover):
+        fake.config = Config(app_id="x", app_secret="y", author="公众号编辑")
+        draft_tools.create_news_draft("标题", "<p>x</p>", cover, author="")
+        assert self._article(fake)["author"] == ""
+
+
 class TestMaterialTools:
     def test_list_drafts_format(self, fake):
         result = material_tools.list_drafts()

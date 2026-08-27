@@ -16,19 +16,22 @@
 
 `access_token` 由内部获取、缓存、失效自愈（`stable_token` + 40001/42001 自动刷新重试一次），**不暴露为工具**。错误统一转为带处置提示的中文信息（如 40164 提示加 IP 白名单、48001 提示需认证账号），且不含凭据。
 
-## 留言开关
+## 默认值三层覆盖（留言开关 / 作者）
 
-两个创建工具都支持 `need_open_comment`（开启留言）与 `only_fans_can_comment`（仅粉丝可评论），按三层优先级解析：
+两个创建工具都支持 `need_open_comment`（开启留言）、`only_fans_can_comment`（仅粉丝可评论），图文工具另支持 `author`（作者名），按同一三层优先级解析：
 
 ```
-工具入参（true/false） > .env 变量 > 内置默认
+工具入参 > .env 变量 > 内置默认
 ```
 
-内置默认：开启留言、不限制仅粉丝。想改写默认值，在 `.env` 里设置 `WECHAT_NEED_OPEN_COMMENT` / `WECHAT_ONLY_FANS_CAN_COMMENT`（接受 1/0/true/false）：
+内置默认：开启留言、不限制仅粉丝、作者留空。想改写默认值，在 `.env` 里配置：
 
 ```bash
 WECHAT_NEED_OPEN_COMMENT=0      # 整个账号默认关闭留言，个别文章仍可传参开启
+WECHAT_AUTHOR=公众号编辑         # 图文默认作者名（图片消息无作者字段）
 ```
+
+留言开关接受 1/0/true/false；作者名传空字符串入参可显式清空 `.env` 配置的默认值。
 
 ## 安装
 

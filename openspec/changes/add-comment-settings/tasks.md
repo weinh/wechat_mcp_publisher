@@ -10,5 +10,11 @@
 
 ## 3. 测试
 
-- [x] 3.1 `tests/test_core/`：`resolve_flag` 矩阵 + 非法 env 值报错 + 白名单解析
+- [x] 3.1 `tests/test_core/`：`resolve_setting` 矩阵 + 非法 env 值报错 + 白名单解析
 - [x] 3.2 `tests/test_tools/`：入参覆盖 / .env 覆盖默认 / 内置兜底三场景对两个工具验证，线上载荷为 0/1 整数
+
+## 4. 作者名（扩展需求）
+
+- [x] 4.1 `config.py`：`Config.author` 可选字段 + `WECHAT_AUTHOR` 解析（去空白，空白=未设置）；`resolve_flag` 通用化为 `resolve_setting`
+- [x] 4.2 `tools/draft.py`：`create_news_draft` 的 `author` 改为 `Optional[str]`，走三层解析（空字符串为显式入参）；newspic 不加作者字段
+- [x] 4.3 测试与文档：作者三层矩阵（含空串覆盖）+ newspic 无 author 断言；`.env.example` / README 更新

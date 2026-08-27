@@ -9,9 +9,10 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..config import (
+    DEFAULT_AUTHOR,
     DEFAULT_NEED_OPEN_COMMENT,
     DEFAULT_ONLY_FANS_CAN_COMMENT,
-    resolve_flag,
+    resolve_setting,
 )
 from ..core.client import get_client
 from ..utils.helpers import load_image, replace_inline_images, resolve_content
@@ -29,14 +30,14 @@ def _resolve_comment_flags(
     cfg = client.config
     return {
         "need_open_comment": int(
-            resolve_flag(
+            resolve_setting(
                 need_open_comment,
                 cfg.need_open_comment,
                 DEFAULT_NEED_OPEN_COMMENT,
             )
         ),
         "only_fans_can_comment": int(
-            resolve_flag(
+            resolve_setting(
                 only_fans_can_comment,
                 cfg.only_fans_can_comment,
                 DEFAULT_ONLY_FANS_CAN_COMMENT,
@@ -49,7 +50,7 @@ def create_news_draft(
     title: str,
     content: str,
     cover: str,
-    author: str = "",
+    author: Optional[str] = None,
     digest: str = "",
     content_source_url: str = "",
     need_open_comment: Optional[bool] = None,
@@ -62,7 +63,7 @@ def create_news_draft(
       content: 正文。支持两种形态——HTML 字符串，或本地 .html 文件路径
                （若该路径存在则自动读取文件，否则按 HTML 内容处理）
       cover: 封面图片（必填）：本地文件路径或 http(s) URL，自动上传为封面素材
-      author: 作者名（可选）
+      author: 作者名（可选，不传用 .env 或默认空；传空字符串可显式覆盖 .env）
       digest: 摘要（可选，留空时微信自动截取正文）
       content_source_url: 原文链接（可选）
       need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
@@ -92,7 +93,9 @@ def create_news_draft(
 
     article = {
         "title": title,
-        "author": author,
+        "author": str(
+            resolve_setting(author, client.config.author, DEFAULT_AUTHOR)
+        ),
         "digest": digest,
         "content": processed_html,
         "content_source_url": content_source_url,

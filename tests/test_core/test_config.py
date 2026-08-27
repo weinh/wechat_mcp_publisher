@@ -1,4 +1,4 @@
-"""config.py：留言开关三层解析与 .env 变量解析。"""
+"""config.py：默认值三层解析（留言开关 / 作者）与 .env 变量解析。"""
 
 from __future__ import annotations
 
@@ -8,22 +8,29 @@ from wechat_mcp_publisher.config import (
     Config,
     ConfigError,
     load_config,
-    resolve_flag,
+    resolve_setting,
 )
 
 
-class TestResolveFlag:
+class TestResolveSetting:
     def test_param_wins_over_everything(self):
-        assert resolve_flag(True, False, False) is True
-        assert resolve_flag(False, True, True) is False
+        assert resolve_setting(True, False, False) is True
+        assert resolve_setting(False, True, True) is False
 
     def test_env_overrides_builtin(self):
-        assert resolve_flag(None, True, False) is True
-        assert resolve_flag(None, False, True) is False
+        assert resolve_setting(None, True, False) is True
+        assert resolve_setting(None, False, True) is False
 
     def test_builtin_fallback(self):
-        assert resolve_flag(None, None, True) is True
-        assert resolve_flag(None, None, False) is False
+        assert resolve_setting(None, None, True) is True
+        assert resolve_setting(None, None, False) is False
+
+    def test_string_tiers(self):
+        assert resolve_setting("入参", ".env", "") == "入参"
+        assert resolve_setting(None, ".env", "") == ".env"
+        assert resolve_setting(None, None, "") == ""
+        # 空字符串是显式入参，能压过 .env
+        assert resolve_setting("", ".env", "") == ""
 
 
 class TestLoadConfigFlags:
@@ -32,9 +39,26 @@ class TestLoadConfigFlags:
         monkeypatch.setenv("WECHAT_APP_SECRET", "secret")
         monkeypatch.delenv("WECHAT_NEED_OPEN_COMMENT", raising=False)
         monkeypatch.delenv("WECHAT_ONLY_FANS_CAN_COMMENT", raising=False)
+        monkeypatch.delenv("WECHAT_AUTHOR", raising=False)
         cfg = load_config()
         assert cfg.need_open_comment is None
         assert cfg.only_fans_can_comment is None
+        assert cfg.author is None
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("老王", "老王"),
+            ("  带空白  ", "带空白"),
+            ("", None),   # 空白视为未设置
+            ("   ", None),
+        ],
+    )
+    def test_author_parsing(self, monkeypatch, raw, expected):
+        monkeypatch.setenv("WECHAT_APP_ID", "id")
+        monkeypatch.setenv("WECHAT_APP_SECRET", "secret")
+        monkeypatch.setenv("WECHAT_AUTHOR", raw)
+        assert load_config().author is expected
 
     @pytest.mark.parametrize(
         "raw,expected",

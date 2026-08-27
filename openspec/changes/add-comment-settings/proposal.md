@@ -5,9 +5,10 @@
 ## What Changes
 
 - 两个创建工具（`create_news_draft` / `create_newspic_draft`）新增可选参数 `need_open_comment` / `only_fans_can_comment`（bool，默认不传）
-- 新增 `.env` 变量 `WECHAT_NEED_OPEN_COMMENT` / `WECHAT_ONLY_FANS_CAN_COMMENT`，用于改写默认值（接受 1/0/true/false）
-- 三层解析优先级：**用户入参 > `.env` > 内置默认**（内置：`need_open_comment=True`、`only_fans_can_comment=False`）
-- 提交给微信时仍转换为接口要求的 0/1 整数
+- `create_news_draft` 的 `author` 纳入同一三层规则（微信 newspic 结构无作者字段，仅 news 生效）
+- 新增 `.env` 变量 `WECHAT_NEED_OPEN_COMMENT` / `WECHAT_ONLY_FANS_CAN_COMMENT`（接受 1/0/true/false）与 `WECHAT_AUTHOR`（字符串，空白视为未设置）
+- 三层解析优先级：**用户入参 > `.env` > 内置默认**（内置：`need_open_comment=True`、`only_fans_can_comment=False`、`author=""`）
+- 提交给微信时留言开关转换为接口要求的 0/1 整数
 - 行为变化：此前硬编码两项均为 0；此后未配置时 `need_open_comment` 默认变 1
 
 ## Capabilities
@@ -16,8 +17,8 @@
 （无）
 
 ### Modified Capabilities
-- `draft-management`: 创建类工具签名新增留言开关参数，新增"留言设置三层解析"要求（含优先级矩阵场景）
-- `mcp-server`: 配置加载扩展为同时承载凭据与行为开关，新增对应要求
+- `draft-management`: 创建类工具签名新增留言开关参数（news 另含作者），新增"可配置默认值三层解析"要求（含优先级矩阵场景）
+- `mcp-server`: 配置加载扩展为同时承载凭据与行为开关/默认值，新增对应要求
 
 ## Impact
 
