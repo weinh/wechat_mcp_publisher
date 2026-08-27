@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from ..config import (
@@ -23,6 +24,12 @@ NEWSPIC_MAX_IMAGES = 20
 # 微信图文硬性上限（按字符计）：超限在本地预校验，避免上传图片后才失败
 NEWS_TITLE_MAX_CHARS = 64
 NEWS_DIGEST_MAX_CHARS = 120
+# 图片消息（newspic）上限与图文不同：标题 20 字、说明 1000 字
+NEWSPIC_TITLE_MAX_CHARS = 20
+NEWSPIC_CONTENT_MAX_CHARS = 1000
+
+# 只认"像标签"的片段（< 后跟字母），普通文本里的 <（如 "3<5"）不误伤
+_HTML_TAG_RE = re.compile(r"</?[a-zA-Z][^>]*>")
 
 
 def _validate_news_fields(title: str, digest: str) -> None:
@@ -35,6 +42,25 @@ def _validate_news_fields(title: str, digest: str) -> None:
         raise ValueError(
             f"摘要超长：当前 {len(digest)} 字，微信上限 {NEWS_DIGEST_MAX_CHARS} 字"
             "（留空则微信自动截取正文）"
+        )
+
+
+def _validate_newspic_fields(title: str, content: str) -> None:
+    """本地预校验图片消息字段（标题 20 字；说明必填、≤1000 字、纯文本）。"""
+    if len(title) > NEWSPIC_TITLE_MAX_CHARS:
+        raise ValueError(
+            f"标题超长：当前 {len(title)} 字，图片消息上限 {NEWSPIC_TITLE_MAX_CHARS} 字"
+            "（与图文的 64 字不同）"
+        )
+    if not (content or "").strip():
+        raise ValueError("content 不能为空：图片消息必须提供纯文本说明")
+    if len(content) > NEWSPIC_CONTENT_MAX_CHARS:
+        raise ValueError(
+            f"说明超长：当前 {len(content)} 字，上限 {NEWSPIC_CONTENT_MAX_CHARS} 字"
+        )
+    if _HTML_TAG_RE.search(content):
+        raise ValueError(
+            "content 必须是纯文本：检测到 HTML 标记；富文本请改用 create_news_draft"
         )
 
 
@@ -126,17 +152,17 @@ def create_news_draft(
 
 def create_newspic_draft(
     title: str,
+    content: str,
     images: list[str],
-    content: str = "",
     need_open_comment: Optional[bool] = None,
     only_fans_can_comment: Optional[bool] = None,
 ) -> dict[str, Any]:
     """创建图片消息草稿（newspic），成功返回 {"media_id": ..., "title": ..., "image_count": ...}。
 
     参数：
-      title: 消息标题（必填）
+      title: 消息标题（必填，上限 20 字，与图文的 64 字不同）
+      content: 图片下方的纯文字说明（必填，≤1000 字，不能含 HTML 标记）
       images: 1~20 张图片，按传入顺序展示；每项为本地文件路径或 http(s) URL
-      content: 图片下方的纯文字说明（可选，注意不是 HTML）
       need_open_comment: 是否开启留言（可选，不传用 .env 或默认开启）
       only_fans_can_comment: 是否仅粉丝可评论（可选，不传用 .env 或默认关闭）
 
@@ -146,6 +172,7 @@ def create_newspic_draft(
     title = (title or "").strip()
     if not title:
         raise ValueError("title 不能为空")
+    _validate_newspic_fields(title, content or "")
 
     if images is None or not isinstance(images, list):
         raise ValueError("images 必须是图片路径列表")

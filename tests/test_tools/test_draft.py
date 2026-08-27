@@ -123,7 +123,7 @@ class TestCreateNewspicDraft:
             p.write_bytes(TINY_JPG)
             paths.append(str(p))
 
-        result = draft_tools.create_newspic_draft("多图", paths, content="说明文字")
+        result = draft_tools.create_newspic_draft("多图", "说明文字", paths)
 
         assert result["image_count"] == 3
         article = fake.drafts_created[0][0]
@@ -134,12 +134,12 @@ class TestCreateNewspicDraft:
 
     def test_zero_images_rejected_before_upload(self, fake):
         with pytest.raises(ValueError, match="1~20"):
-            draft_tools.create_newspic_draft("无图", [])
+            draft_tools.create_newspic_draft("无图", "说明", [])
         assert fake.permanent_uploads == [], "数量越界时不应上传任何图片"
 
     def test_too_many_images_rejected(self, fake):
         with pytest.raises(ValueError, match="1~20"):
-            draft_tools.create_newspic_draft("超量", [f"/tmp/{i}.jpg" for i in range(21)])
+            draft_tools.create_newspic_draft("超量", "说明", [f"/tmp/{i}.jpg" for i in range(21)])
 
     def test_upload_failure_no_draft_created(self, fake, tmp_path):
         paths = []
@@ -150,7 +150,7 @@ class TestCreateNewspicDraft:
         fake.fail_permanent_at = 1  # 第二张失败
 
         with pytest.raises(WeChatAPIError):
-            draft_tools.create_newspic_draft("中途失败", paths)
+            draft_tools.create_newspic_draft("中途失败", "说明", paths)
         assert fake.drafts_created == [], "任一图片失败不得创建草稿"
 
 
@@ -190,7 +190,7 @@ class TestCommentFlags:
         img = tmp_path / "i.jpg"
         img.write_bytes(TINY_JPG)
         # .env 层未设置 → 内置默认；入参显式关留言
-        draft_tools.create_newspic_draft("标题", [str(img)],
+        draft_tools.create_newspic_draft("标题", "说明", [str(img)],
                                          need_open_comment=False)
         article = self._article(fake)
         assert article["need_open_comment"] == 0
@@ -200,7 +200,7 @@ class TestCommentFlags:
         img = tmp_path / "i.jpg"
         img.write_bytes(TINY_JPG)
         fake.config = Config(app_id="x", app_secret="y", only_fans_can_comment=True)
-        draft_tools.create_newspic_draft("标题", [str(img)])
+        draft_tools.create_newspic_draft("标题", "说明", [str(img)])
         article = self._article(fake)
         assert article["need_open_comment"] == 1, "未配置项走内置默认"
         assert article["only_fans_can_comment"] == 1, ".env 改写默认"
@@ -227,6 +227,49 @@ class TestNewsFieldValidation:
         article = self._article(fake)
         assert article["title"] == "标" * 64
         assert article["digest"] == "摘" * 120
+
+
+class TestNewspicFieldValidation:
+    """newspic 预校验：title ≤20 字；content 必填、≤1000 字、纯文本。"""
+
+    def _no_side_effects(self, fake) -> None:
+        assert fake.drafts_created == [] and fake.permanent_uploads == []
+
+    def test_title_over_20_rejected(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        with pytest.raises(ValueError, match="20"):
+            draft_tools.create_newspic_draft("标" * 21, "说明", [str(img)])
+        self._no_side_effects(fake)
+
+    def test_empty_content_rejected(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        with pytest.raises(ValueError, match="content 不能为空"):
+            draft_tools.create_newspic_draft("标题", "   ", [str(img)])
+        self._no_side_effects(fake)
+
+    def test_content_over_1000_rejected(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        with pytest.raises(ValueError, match="1000"):
+            draft_tools.create_newspic_draft("标题", "文" * 1001, [str(img)])
+        self._no_side_effects(fake)
+
+    def test_html_content_rejected(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        with pytest.raises(ValueError, match="纯文本"):
+            draft_tools.create_newspic_draft("标题", "<p>这不是纯文本</p>", [str(img)])
+        self._no_side_effects(fake)
+
+    def test_plain_angle_bracket_not_flagged(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        draft_tools.create_newspic_draft("标题", "3<5 是真话", [str(img)])
+        assert fake.drafts_created, "非标签形态的 < 不应误伤"
+
+    def test_boundary_20_1000_passes(self, fake, tmp_path):
+        img = tmp_path / "i.jpg"; img.write_bytes(TINY_JPG)
+        draft_tools.create_newspic_draft("标" * 20, "文" * 1000, [str(img)])
+        article = fake.drafts_created[0][0]
+        assert article["title"] == "标" * 20
+        assert article["content"] == "文" * 1000
 
 
 class TestAuthorResolution:
